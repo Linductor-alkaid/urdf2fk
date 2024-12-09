@@ -86,13 +86,12 @@ void calculateEndEffectorFK(const vector<JointLinkParam>& joints, vector<double>
 
     // 打印末端执行器的三维坐标
     cout << "End-Effector Position: ";
-    cout << "X: " << T[0][3] << ", Y: " << T[1][3] << ", Z: " << T[2][3] << endl;
+    cout << "X: " << T[1][3] << ", Y: " << T[2][3] << ", Z: " << T[0][3] << endl;
 }
 
 int main() {
     // 解析URDF文件
     string urdfFilename = "robot_model.urdf";  // URDF文件名
-    vector<JointLinkParam> joints;
 
     XMLDocument doc;
     if (doc.LoadFile(urdfFilename.c_str()) != XML_SUCCESS) {
@@ -107,24 +106,15 @@ int main() {
     }
 
     // 解析所有的关节
+    vector<JointLinkParam> joints;
+    vector<double> jointAlphas;
+
+    // 解析每个 <joint> 元素，获取 alpha 值
     XMLElement* jointElement = robotElement->FirstChildElement("joint");
+
     while (jointElement) {
         JointLinkParam joint;
         joint.name = jointElement->Attribute("name");
-
-        // 解析origin元素
-        XMLElement* originElement = jointElement->FirstChildElement("origin");
-        if (originElement) {
-            const char* xyz = originElement->Attribute("xyz");
-
-            // 解析xyz
-            if (xyz) {
-                double x, y, z;
-                sscanf(xyz, "%lf %lf %lf", &x, &y, &z);
-                joint.d = x;  // 连杆偏移为 xyz 中的 x
-                joint.a = z;  // 连杆长度为 xyz 中的 z
-            }
-        }
 
         // 解析axis元素
         XMLElement* axisElement = jointElement->FirstChildElement("axis");
@@ -136,22 +126,72 @@ int main() {
                 double ax, ay, az;
                 sscanf(axis, "%lf %lf %lf", &ax, &ay, &az);
 
-                // 根据旋转轴反计算alpha
-                if (ax == 1.0 && ay == 0.0 && az == 0.0) {
-                    joint.alpha = 0.0;  // 如果轴是 (1, 0, 0)，则alpha为0
+                // 通过反三角函数计算alpha (arctan(y/x))
+                if (ax == 0.0 && ay == 0.0) {
+                    joint.alpha = 0.0;  // 如果轴是 (0, 0, z)，则alpha为0
                 } else {
-                    joint.alpha = atan2(ay, ax);  // 通过反三角函数计算alpha
+                    joint.alpha = atan2(ay, ax);  // 计算旋转角度 alpha
+                }
+
+                // 将计算出来的 alpha 存入 jointAlphas
+                jointAlphas.push_back(joint.alpha);
+            }
+        }
+        joints.push_back(joint);
+
+        jointElement = jointElement->NextSiblingElement("joint");
+    }
+
+    // 存储所有的 Link 参数
+    vector<JointLinkParam> links;
+    XMLElement* linkElement = robotElement->FirstChildElement("link");
+
+    while (linkElement) {
+        JointLinkParam link;
+        link.name = linkElement->Attribute("name");
+
+        // 解析link中的inertial元素
+        XMLElement* inertialElement = linkElement->FirstChildElement("inertial");
+        if (inertialElement) {
+            XMLElement* originElement = inertialElement->FirstChildElement("origin");
+            if (originElement) {
+                const char* xyz = originElement->Attribute("xyz");
+
+                if (xyz) {
+                    double x, y, z;
+                    sscanf(xyz, "%lf %lf %lf", &x, &y, &z);
+                    link.d = 2*x;  // 将 x 赋值给连杆偏移 d
+                    link.a = 2*z;  // 将 z 赋值给连杆长度 a
                 }
             }
         }
 
-        // 将解析出的关节信息存入joints
-        joints.push_back(joint);
-        jointElement = jointElement->NextSiblingElement("joint");
+        // 根据 joint 中的 alpha 值设置
+        if (!jointAlphas.empty()) {
+            link.alpha = jointAlphas.front();
+            jointAlphas.erase(jointAlphas.begin());
+        } else{
+            link.alpha = 0.0;
+        }
+
+        // 将解析出的 Link 信息存入 links
+        links.push_back(link);
+
+        linkElement = linkElement->NextSiblingElement("link");
     }
+
+    // // 输出解析结果
+    // cout << "Parsed Joint and Link Parameters:" << endl;
+    // for (size_t i = 0; i < links.size(); ++i) {
+    //     cout << "Link " << i << " (" << links[i].name << "):" << endl;
+    //     cout << "  d (offset): " << links[i].d << endl;
+    //     cout << "  a (length): " << links[i].a << endl;
+    //     cout << "  alpha (twist): " << links[i].alpha << endl;
+    // }
 
     // 用户输入关节角度
     vector<double> jointAngles;
+    jointAngles.push_back(0.0);  // 将第一个关节的theta设为0
     for (size_t i = 0; i < joints.size(); ++i) {
         double angle;
         cout << "Enter the angle for joint " << joints[i].name << " (in radians): ";
@@ -160,7 +200,7 @@ int main() {
     }
 
     // 计算末端执行器的位姿
-    calculateEndEffectorFK(joints, jointAngles);
+    calculateEndEffectorFK(links, jointAngles);
 
     return 0;
 }
