@@ -1,0 +1,70 @@
+# CMake 构建文件
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Visual Studio 生成的文件
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+*.tlog
+*.lastbuildstate
+*.recipe
+
+# 编译产物
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.dylib
+*.so
+*.exp
+*.ilk
+*.pdb
+*.idb
+*.pch
+
+# 调试文件
+*.dSYM/
+*.su
+*.user
+*.userosscache
+*.sln.docstates
+
+# IDE 相关文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 临时文件
+*.tmp
+*.bak
+*.cache
+*.log
+
+# 测试相关
+Testing/
+test_results/
+
+# 其他
+*.orig
+*.rej
+

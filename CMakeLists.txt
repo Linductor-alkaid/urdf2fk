@@ -6,14 +6,17 @@ project(urdf2fk)
 # 设置 C++ 标准
 set(CMAKE_CXX_STANDARD 11)
 
-# 添加源代码
+# 添加源代码（直接使用项目目录中的tinyxml2）
 add_executable(urdf2fk urdf2fk.cpp tinyxml2.cpp)
 
-# 如果你在系统上安装了 tinyxml2，可以使用 find_package 来链接
-find_package(TinyXML2 REQUIRED)
+# 设置包含目录为当前目录，以便找到tinyxml2.h
+target_include_directories(urdf2fk PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# 如果 tinyxml2 在默认路径中找不到，你可以指定库路径
-# target_include_directories(DH2urdf PRIVATE /path/to/tinyxml2)
+# 处理编译警告
+# 禁用sscanf的安全警告（使用_CRT_SECURE_NO_WARNINGS）
+target_compile_definitions(urdf2fk PRIVATE _CRT_SECURE_NO_WARNINGS)
 
-# 如果是用系统安装的 tinyxml2，则需要链接它
-target_link_libraries(urdf2fk PRIVATE tinyxml2)
+# 在Windows上设置UTF-8编码以避免字符编码警告
+if(MSVC)
+    target_compile_options(urdf2fk PRIVATE /utf-8)
+endif()
